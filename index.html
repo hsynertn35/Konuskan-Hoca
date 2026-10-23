@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="tr" data-theme="cream">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f0b429">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="KONUŞKAN hoca">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>KONUŞKAN hoca</title>
+<script>
+/* Görünüm ayarlarını sayfa çizilmeden uygula (titreme olmasın) */
+try { var u = JSON.parse(localStorage.getItem('eo_ui') || '{}'), r = document.documentElement;
+  r.dataset.theme = u.theme || 'cream'; r.style.setProperty('--fs', u.fs || 1); r.dataset.font = u.font || 'system'; r.dataset.motion = u.motion || 'on'; } catch (e) {}
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hero">
+  <h1 class="wordmark">KONUŞKAN<i>hoca</i></h1>
+  <p class="tagline">Konuş, öğren, gelişimini gör</p>
+  <p class="school">Hekimhan Anadolu Lisesi · TÜBİTAK 4006-A Projesi</p>
+</header>
+<div class="navbar">
+  <nav id="nav">
+    <button data-view="setup" class="active">🎙 Ders</button>
+    <button data-view="upload">📁 Kayıt Değerlendir</button>
+    <button data-view="history">🗂 Geçmiş</button>
+    <button data-view="settings">⚙️ Ayarlar</button>
+  </nav>
+  <div id="liveBar" class="livebar" hidden></div>
+  <div id="jobBar" class="jobbar" hidden></div>
+</div>
+
+<main>
+  <!-- AYARLAR -->
+  <section id="view-settings" class="view">
+    <div class="card">
+      <h2>🔑 API Anahtarı</h2>
+      <p class="muted">Anahtar yalnızca bu cihazın tarayıcısında/uygulamasında saklanır. Başka bilgisayarda açınca tekrar yapıştırman yeterli.</p>
+      <div class="row">
+        <input id="apiKey" type="password" placeholder="API anahtarını buraya yapıştır" autocomplete="off" spellcheck="false">
+        <button id="btnPaste" class="ghost" type="button">📋 Yapıştır</button>
+        <button id="btnShowKey" class="ghost" type="button">👁</button>
+      </div>
+      <div class="row">
+        <button id="btnSaveKey" class="primary" type="button">Kaydet ve Test Et</button>
+        <button id="btnClearKey" class="ghost" type="button">Anahtarı Sil</button>
+        <span id="keyStatus" class="status"></span>
+      </div>
+      <details>
+        <summary>Gelişmiş</summary>
+        <label>Canlı konuşma modeli <input id="liveModel" type="text" spellcheck="false"></label>
+        <label>Değerlendirme modeli <input id="evalModel" type="text" spellcheck="false"></label>
+        <p class="muted">Google model adlarını zaman zaman değiştirir. “Kaydet ve Test Et” güncel adları otomatik bulur.</p>
+        <button id="btnResetModels" class="ghost" type="button">Varsayılana dön</button>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>🎨 Görünüm</h2>
+      <div class="grid2">
+        <label>Tema rengi
+          <select id="uiTheme">
+            <option value="cream">☀️ Krem (açık)</option>
+            <option value="dark">🌙 Koyu</option>
+            <option value="contrast">◐ Yüksek kontrast</option>
+          </select>
+        </label>
+        <label>Yazı boyutu
+          <select id="uiSize">
+            <option value="0.875">Küçük</option>
+            <option value="1">Normal</option>
+            <option value="1.15">Büyük</option>
+            <option value="1.3">Çok büyük</option>
+            <option value="1.5">En büyük</option>
+          </select>
+        </label>
+        <label>Yazı cinsi
+          <select id="uiFont">
+            <option value="system">Sistem (varsayılan)</option>
+            <option value="sans">Sade (Arial / Helvetica)</option>
+            <option value="serif">Klasik (Georgia, serifli)</option>
+            <option value="readable">Okunaklı (Verdana / Tahoma)</option>
+            <option value="rounded">Yumuşak (yuvarlak hatlı)</option>
+            <option value="mono">Daktilo (eş aralıklı)</option>
+          </select>
+        </label>
+        <label>Animasyonlar
+          <select id="uiMotion">
+            <option value="on">Açık</option>
+            <option value="off">Azalt / kapat</option>
+          </select>
+        </label>
+      </div>
+      <div class="previewbox" id="uiPreview">Önizleme: <b>Hello! Merhaba! Guten Tag! 你好 مرحبا</b><br>Bu ayarlar anında uygulanır ve bu cihazda hatırlanır.</div>
+    </div>
+
+    <div class="card">
+      <h2>🎧 Ders Ekranı Varsayılanları</h2>
+      <div class="grid2">
+        <label>Konuşma dökümü (transkript)
+          <select id="uiTranscript"><option value="show">Göster</option><option value="hide">Gizle (sadece dinle ve konuş)</option></select>
+        </label>
+        <label>Yazılı ipuçları
+          <select id="uiHints"><option value="show">Göster</option><option value="hide">Gizle</option></select>
+        </label>
+      </div>
+      <p class="muted">Bunları ders sırasında da tek dokunuşla açıp kapatabilirsin.</p>
+    </div>
+
+    <div class="card">
+      <h2>⚡ Değerlendirme Hızı</h2>
+      <label>Hız / kalite
+        <select id="evalSpeed">
+          <option value="fast">En hızlı (hafif model) – önerilen</option>
+          <option value="balanced">Dengeli (daha ayrıntılı, biraz yavaş)</option>
+        </select>
+      </label>
+      <label>Telaffuz için ses kaydı
+        <select id="evalAudio">
+          <option value="on">Ses kaydını da gönder (telaffuz daha doğru)</option>
+          <option value="off">Sadece metin (en hızlı, telaffuz tahmini)</option>
+        </select>
+      </label>
+      <p class="muted">Değerlendirme arka planda çalışır; başka sekmelere geçebilirsin.</p>
+    </div>
+    <div class="card">
+      <h2>📲 Uygulamayı Kur</h2>
+      <p class="muted">Tek dokunuşla açılması için ana ekrana/masaüstüne ekle.</p>
+      <button id="btnInstall" class="primary" type="button" hidden>📲 Uygulamayı Yükle</button>
+      <p class="muted" id="iosHint" hidden><b>iPhone:</b> Safari'de Paylaş simgesi → “Ana Ekrana Ekle”.</p>
+      <p class="muted"><b>Android:</b> Chrome menüsü (⋮) → “Uygulamayı yükle”. <b>Bilgisayar:</b> Chrome/Edge adres çubuğundaki yükle simgesi.</p>
+    </div>
+    <div class="card">
+      <h2>💾 Kayıt Tercihi</h2>
+      <label>Ders bitince ses kaydı ne yapılsın?
+        <select id="recPref">
+          <option value="ask">Her seferinde sor</option>
+          <option value="keep">Hep sakla</option>
+          <option value="delete">Hiç saklama</option>
+        </select>
+      </label>
+      <p class="muted">Ses kaydı saklanırsa yalnızca bu cihazda tutulur. Konuşma dökümü ve rapor her zaman Geçmiş'e kaydedilir.</p>
+    </div>
+    <div class="card about">
+      <h2>ℹ️ Hakkında</h2>
+      <p><b class="wordmark small">KONUŞKAN<i>hoca</i></b> – yapay zekâ destekli, sesli çok dilli konuşma ve değerlendirme uygulaması.</p>
+      <p class="muted"><b>Hekimhan Anadolu Lisesi</b> · TÜBİTAK 4006-A Projesi</p>
+    </div>
+  </section>
+
+  <!-- DERS KURULUMU -->
+  <section id="view-setup" class="view active">
+    <div class="card">
+      <h2>👤 Misafir Girişi</h2>
+      <div class="grid2">
+        <label>İsim <input id="firstName" type="text" autocomplete="given-name"></label>
+        <label>Soyisim <input id="lastName" type="text" autocomplete="family-name"></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🌍 Dil ve Seviye</h2>
+      <div class="grid2">
+        <label>Öğrenilecek dil <select id="lang"></select></label>
+        <label>Dil seviyesi (A1 – C2) <select id="level"></select></label>
+      </div>
+      <p class="muted" id="levelHint"></p>
+    </div>
+
+    <div class="card">
+      <h2>🎯 Konu</h2>
+      <p class="muted">Bir konu seç (parantez içinde öğrendiğin dildeki açıklaması var) ya da aşağıya kendi konunu yaz.</p>
+      <div class="grid2">
+        <label>Konu listesi
+          <select id="topicSet">
+            <option value="all">Tüm konular</option>
+            <option value="g">Genel konular</option>
+            <option value="9">9. sınıf üniteleri</option>
+            <option value="10">10. sınıf üniteleri</option>
+            <option value="11">11. sınıf üniteleri</option>
+            <option value="12">12. sınıf üniteleri</option>
+          </select>
+        </label>
+        <label>Konu ara <input id="topicSearch" type="search" placeholder="🔎 müzik, seyahat, yapay zekâ…" autocomplete="off"></label>
+      </div>
+      <div id="topicSel" class="selbox"></div>
+      <div id="themeChips"></div>
+      <label>✍️ Kendi konunu yaz (seçileni geçersiz kılar)
+        <input id="customTopic" type="text" placeholder="Örn: Hayalimdeki meslek, futbol, iklim değişikliği…">
+      </label>
+    </div>
+
+    <div class="card">
+      <h2>⏱ Süre</h2>
+      <p class="muted">1–15 dakika arasından seç ya da kendin yaz. <b>Süre dolsa bile hocayla konuşmaya devam edebilirsin</b>; ders sen “Dersi Bitir” diyene kadar sürer.</p>
+      <div id="durBox"></div>
+    </div>
+
+    <div class="card">
+      <h2>📚 Dil Yapıları</h2>
+      <p class="muted">İstersen hoca konuşurken bunları da öğretsin. Parantez içinde öğrendiğin dildeki karşılığı görünür. <b id="gramCount"></b></p>
+      <div class="chips" id="grammarChips"></div>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Ders Ayarları</h2>
+      <div class="grid2">
+        <label>Öğretmen
+          <select id="teacherGender"><option value="female">Kadın öğretmen</option><option value="male">Erkek öğretmen</option></select>
+        </label>
+        <label>Ses <select id="voiceName"></select></label>
+        <label>Öğretmen modu
+          <select id="mode">
+            <option value="encouraging">😊 Teşvik edici</option>
+            <option value="medium" selected>📘 Orta (MEB ölçütleri)</option>
+            <option value="hard">🔥 Zor (katı)</option>
+          </select>
+        </label>
+        <label>Türkçe yardım (ders sırasında da değişir)
+          <select id="trHelp">
+            <option value="auto">Az (sadece ipucu; A1-A2'de daha çok)</option>
+            <option value="none">Kapalı</option>
+            <option value="more">Çok (Türkçe açıklama)</option>
+          </select>
+        </label>
+        <label>Mikrofon
+          <select id="micMode">
+            <option value="auto">🙌 Eller serbest (otomatik dinler)</option>
+            <option value="manual">👆 Elle (başlat / durdur butonuyla)</option>
+          </select>
+        </label>
+      </div>
+      <p class="muted" id="modeHint"></p>
+      <button id="btnStart" class="primary big" type="button">▶ Derse Başla</button>
+    </div>
+  </section>
+
+  <!-- DERS -->
+  <section id="view-session" class="view">
+    <div class="card session">
+      <div class="sess-head">
+        <div><b id="sessTeacher">Öğretmen</b><div class="muted" id="sessInfo"></div></div>
+        <div class="timer" id="timer">00:00</div>
+      </div>
+      <div class="orb" id="orb"><span id="orbLabel">Bağlanıyor…</span></div>
+      <div class="meter"><div id="micLevel"></div></div>
+      <button id="btnMic" class="micbtn" type="button">🎙 Mikrofon açık</button>
+      <div id="hintCard" class="hintcard" hidden></div>
+      <div class="transcript" id="transcript"></div>
+      <div class="row center toggles">
+        <button id="btnTrans" class="ghost" type="button">💬 Transkript: açık</button>
+        <button id="btnHintsToggle" class="ghost" type="button">💡 İpuçları: açık</button>
+        <button id="btnHint" class="ghost" type="button">💡 İpucu iste</button>
+        <button id="btnText" class="ghost" type="button">⌨ Yazarak cevap ver</button>
+      </div>
+      <div class="grid2 livectl">
+        <label>🇹🇷 Türkçe yardım
+          <select id="liveTr">
+            <option value="none">Kapalı</option>
+            <option value="auto">Az (sadece ipucu)</option>
+            <option value="more">Çok (Türkçe açıklama)</option>
+          </select>
+        </label>
+        <label>🎙 Mikrofon modu
+          <select id="liveMic">
+            <option value="auto">🙌 Eller serbest</option>
+            <option value="manual">👆 Elle başlat / durdur</option>
+          </select>
+        </label>
+      </div>
+      <div class="row" id="textRow" hidden>
+        <input id="textInput" type="text" placeholder="Type your answer…">
+        <button id="btnSendText" class="primary" type="button">Gönder</button>
+      </div>
+      <div class="row center"><button id="btnEnd" class="danger" type="button">■ Dersi Bitir</button></div>
+      <p class="muted center-text">Ders sürerken üstteki menüden Ayarlar'a veya Geçmiş'e geçebilirsin; ders arka planda devam eder. Süre dolsa da hoca seninle konuşmaya devam eder.</p>
+    </div>
+  </section>
+
+  <!-- KAYIT DEĞERLENDİR -->
+  <section id="view-upload" class="view">
+    <div class="card">
+      <h2>📁 Ses Kaydı Değerlendirme</h2>
+      <p class="muted">Canlı ders yerine yabancı dilde konuşmanı <b>kaydet</b> ya da hazır bir <b>ses dosyası yükle</b>. Hoca kaydı dinler ve canlı dersle aynı ölçütlerle raporlar (A1–C2 seviyesi, dil bilgisi, kelime, akıcılık, tutarlılık, telaffuz; teşvik edici / MEB / katı ayrı puanlar).</p>
+      <div class="grid2">
+        <label>İsim <input id="upFirst" type="text"></label>
+        <label>Soyisim <input id="upLast" type="text"></label>
+        <label>Konuşulan dil <select id="upLang"></select></label>
+        <label>Hedef seviye <select id="upLevel"></select></label>
+      </div>
+      <label>Konu (isteğe bağlı – ne hakkında konuştun?)
+        <input id="upTopic" type="text" placeholder="Örn: Ailem, tatil planlarım, yapay zekâ…">
+      </label>
+    </div>
+    <div class="card">
+      <h2>🎙 Kaydı Al</h2>
+      <div class="row">
+        <button id="upRec" class="primary" type="button">⏺ Kayda başla</button>
+        <button id="upStop" class="danger" type="button" hidden>⏹ Durdur</button>
+        <span id="upTimer" class="timer small">00:00</span>
+      </div>
+      <p class="muted">veya hazır dosya seç (mp3, wav, m4a, ogg, webm, aac, flac…):</p>
+      <div class="row">
+        <label class="filebtn ghost">📂 Ses dosyası seç<input id="upFile" type="file" accept="audio/*,video/mp4,video/webm,.m4a,.mp3,.wav,.ogg,.aac,.flac,.webm,.opus" hidden></label>
+        <span id="upInfo" class="muted"></span>
+      </div>
+      <audio id="upPlayer" controls hidden style="width:100%;margin-top:8px"></audio>
+    </div>
+    <div class="card">
+      <h2>⏱ Süre</h2>
+      <p class="muted">Kaydın süresi otomatik bulunur. Hedeflediğin konuşma süresini yazarsan puan, süre oranına göre (konuştuğun süre ÷ hedef süre) düzeltilir.</p>
+      <div class="grid2">
+        <label>Kaydın süresi (saniye) <input id="upDur" type="number" min="1" max="3600" placeholder="otomatik"></label>
+      </div>
+      <p class="muted">Hedef süre (isteğe bağlı):</p>
+      <div id="upDurBox"></div>
+      <button id="upEval" class="primary big" type="button" disabled>📝 Kaydı Değerlendir</button>
+    </div>
+  </section>
+
+  <!-- RAPOR -->
+  <section id="view-report" class="view">
+    <div class="card" id="reportCard"></div>
+  </section>
+
+  <!-- GEÇMİŞ -->
+  <section id="view-history" class="view">
+    <div class="card"><h2>🗂 Geçmiş</h2><div id="historyList"></div></div>
+  </section>
+</main>
+
+<footer class="schoolfoot">
+  <b>Hekimhan Anadolu Lisesi</b> · TÜBİTAK 4006-A Projesi
+</footer>
+
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
